@@ -1,0 +1,24 @@
+﻿@{
+    Layout = "~/Views/Shared/_Layout.cshtml";
+    ViewData["Title"] = "Create room";
+}
+
+<div class="d-flex flex-column justify-content-center align-items-center" style="flex-shrink: 1; height: 100vh;">
+    <button onclick="makeId()" type="button" class="btn btn-primary btn-lg">Create room</button>
+    <hr class="my-4">
+    Or join ur friend's group by link
+</div>
+
+@section scripts {
+    <script>
+        function makeId() {
+            let result = '';
+            const characters = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+            const charactersLength = characters.length;
+            for (let i = 0; i < 6; i++) {
+                result += characters.charAt(Math.floor(Math.random() * charactersLength));
+            }
+            window.location.href = "/r?id=" + result;
+        }
+    </script>
+}

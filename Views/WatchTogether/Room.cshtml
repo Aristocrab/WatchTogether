@@ -1,0 +1,60 @@
+﻿@{
+    Layout = "~/Views/Shared/_Layout.cshtml";
+    ViewData["Title"] = "Room";
+}
+
+@model string
+
+<div class="row m-0 p-5">
+    <div class="col-9">
+        <div class="ratio ratio-16x9">
+            <img id="placeholder" src="~/img/placeholder.png" alt="" style="z-index: 1;"/>
+            <div id="player"></div>
+        </div>
+        <br>
+
+        <div class="d-flex">
+            <input id="inp" class="form-control me-2" type="search" value="https://www.youtube.com/watch?v=_sZ1iNA6pqM" placeholder="Ссылка на видео" aria-label="Search">
+            <button class="btn btn-outline-success" type="submit" onclick="addToPlaylist($('#inp').val())">Добавить</button>
+        </div>
+        <p id="group">None</p>
+    </div>
+    <div class="col">
+        <div class="accordion" id="accordionExample1">
+            <div class="accordion-item">
+                <h2 class="accordion-header" id="headingOne">
+                    <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#collapseOne" aria-expanded="true" aria-controls="collapseOne">
+                        Плейлист
+                    </button>
+                </h2>
+                <div class="accordion-collapse collapse show" aria-labelledby="headingOne" data-bs-parent="#accordionExample1">
+                    <ul id="playlist" class="list-group list-group-flush list-group-numbered">
+
+                    </ul>
+                </div>
+            </div>
+        </div>
+        <br>
+        <div class="accordion" id="accordionExample3">
+            <div class="accordion-item">
+                <h2 class="accordion-header" id="headingTwo">
+                    <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#collapseThree" aria-expanded="true" aria-controls="collapseThree">
+                        Пользователи
+                    </button>
+                </h2>
+                <div class="accordion-collapse collapse show" aria-labelledby="headingOne" data-bs-parent="#accordionExample3">
+                    <ul id="usersList" class="list-group list-group-flush">
+
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+@section scripts {
+    <script src="~/lib/signalr/signalr.js"></script>
+    <script src="~/lib/jquery/jquery.min.js"></script>
+    <script src="~/js/wtg.js"></script>
+}
