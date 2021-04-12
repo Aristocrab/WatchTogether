@@ -112,45 +112,45 @@ hubConnection.on("Kick", function () {
 
 function addToPlaylist(url) {
     const id = url.substring(url.indexOf('=') + 1).substring(0, 11);
-    hubConnection.invoke("AddToPlaylist", id);
+    hubConnection.invoke("AddToPlaylist", id).catch(function (e) { console.error(e); });
 }
 
-function getVideoData(url) {
-    $.getJSON("https://www.googleapis.com/youtube/v3/videos?part=id%2C+snippet&id=cZmH04yRgH0&key=AIzaSyCkQDvBLuFd9cf7nX7UAXzN-vtrQ3VI6ck",
-        function (data) {
-            $("#th").attr("src", data["items"][0]["snippet"]["thumbnails"]["standard"]["url"]);
-        }
-    );
-}
+// function getVideoData(url) {
+//     $.getJSON("https://www.googleapis.com/youtube/v3/videos?part=id%2C+snippet&id=cZmH04yRgH0&key=AIzaSyCkQDvBLuFd9cf7nX7UAXzN-vtrQ3VI6ck",
+//         function (data) {
+//             $("#th").attr("src", data["items"][0]["snippet"]["thumbnails"]["standard"]["url"]);
+//         }
+//     );
+// }
 
 function playVideo() {
-    hubConnection.invoke("PlayVideo");
+    hubConnection.invoke("PlayVideo").catch(function (e) { console.error(e); });
 }
 
 function pauseVideo() {
-    hubConnection.invoke("PauseVideo");
+    hubConnection.invoke("PauseVideo").catch(function (e) { console.error(e); });
 }
 
 function joinGroup(group) {
     if (document.getElementById('group').innerHTML === "None") {
-        hubConnection.invoke("JoinGroup", group);
+        hubConnection.invoke("JoinGroup", group).catch(function (e) { console.error(e); });
     }
 }
 
 function next() {
-    hubConnection.invoke("NextInPlaylist");
+    hubConnection.invoke("NextInPlaylist").catch(function (e) { console.error(e); });
 }
 
 function removeFromPlaylist(id) {
-    hubConnection.invoke("RemoveFromPlaylist", id);
+    hubConnection.invoke("RemoveFromPlaylist", id).catch(function (e) { console.error(e); });
 }
 
 function makeModerator(id) {
-    hubConnection.invoke("ToggleModerator", id);
+    hubConnection.invoke("ToggleModerator", id).catch(function (e) { console.error(e); });
 }
 
 function kickUser(id) {
-    hubConnection.invoke("KickUser", id);
+    hubConnection.invoke("KickUser", id).catch(function (e) { console.error(e); });
 }
 
 hubConnection.start().then(function () {
