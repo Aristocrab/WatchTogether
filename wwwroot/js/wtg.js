@@ -19,23 +19,23 @@ function onYouTubeIframeAPIReady() {
     });
 }
 
-let outer = false;
+let outer = 0;
 
 // Disable play/pause for non-admin users
 function onPlayerStateChange(event) {
     if (event.data !== -1 && event.data !== 3) {
         console.log(event.data);
-        if (!outer) {
+        if (outer !== 0) {
             if (event.data === 2) {
                 pauseVideo();
             } else if (event.data === 1) {
-                playVideo();
+                playVideo(player.getCurrentTime());
             } else if (event.data === 0) {
                 removeFromPlaylist("");
                 next();
             }
         } else {
-            outer = false;
+            outer -= 1;
         }
     }
 }
@@ -45,19 +45,21 @@ const hubConnection = new signalR.HubConnectionBuilder()
     .withUrl("/wtg")
     .build();
 
-hubConnection.on("PlayVideo", function (seconds) {
-    outer = true;
+hubConnection.on("PlayVideo", function (time) {
+    console.log(time);
+    outer = 2;
+    player.seekTo(time, true);
     player.playVideo();
 });
 
 hubConnection.on("PauseVideo", function () {
-    outer = true;
+    outer = 1;
     player.pauseVideo();
 });
 
 hubConnection.on("ChangeVideo", function (id) {
     $("#placeholder").hide();
-    outer = true;
+    outer = 1;
     player.loadVideoById(id);
 });
 
@@ -123,8 +125,8 @@ function addToPlaylist(url) {
 //     );
 // }
 
-function playVideo() {
-    hubConnection.invoke("PlayVideo").catch(function (e) { console.error(e); });
+function playVideo(time) {
+    hubConnection.invoke("PlayVideo", time).catch(function (e) { console.error(e); });
 }
 
 function pauseVideo() {

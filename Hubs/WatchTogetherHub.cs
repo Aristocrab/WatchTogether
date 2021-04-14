@@ -81,13 +81,13 @@ namespace WatchTogether.Hubs
             }
         }
 
-        public async Task PlayVideo()
+        public async Task PlayVideo(double time)
         {
             if (UsersList.Users.Any(u => u.ConnectionId == Context.ConnectionId))
             {
                 var user = UsersList.Users.First(u => u.ConnectionId == Context.ConnectionId);
                 if (user.Moderator)
-                    await Clients.GroupExcept(user.Group, Context.ConnectionId).SendAsync("PlayVideo");
+                    await Clients.GroupExcept(user.Group, Context.ConnectionId).SendAsync("PlayVideo", time);
                 else
                     await Clients.Caller.SendAsync("PauseVideo");
             }
