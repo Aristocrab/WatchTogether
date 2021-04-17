@@ -19,23 +19,24 @@ function onYouTubeIframeAPIReady() {
     });
 }
 
-let outer = 0;
+let outer = false;
 
 // Disable play/pause for non-admin users
 function onPlayerStateChange(event) {
     if (event.data !== -1 && event.data !== 3) {
         console.log(event.data);
-        if (outer !== 0) {
+        if (!outer) {
             if (event.data === 2) {
                 pauseVideo();
             } else if (event.data === 1) {
-                playVideo(player.getCurrentTime());
+                let date = new Date();
+                playVideo(player.getCurrentTime(), date.getSeconds());
             } else if (event.data === 0) {
                 removeFromPlaylist("");
                 next();
             }
         } else {
-            outer -= 1;
+            outer = false;
         }
     }
 }
@@ -45,21 +46,21 @@ const hubConnection = new signalR.HubConnectionBuilder()
     .withUrl("/wtg")
     .build();
 
-hubConnection.on("PlayVideo", function (time) {
-    console.log(time);
-    outer = 2;
-    player.seekTo(time, true);
+hubConnection.on("PlayVideo", function (seconds, current) {
+    let date = new Date();
+    setTime(seconds + Math.abs(current - date.getSeconds()));
+    outer = true;
     player.playVideo();
 });
 
 hubConnection.on("PauseVideo", function () {
-    outer = 1;
+    outer = true;
     player.pauseVideo();
 });
 
 hubConnection.on("ChangeVideo", function (id) {
     $("#placeholder").hide();
-    outer = 1;
+    outer = true;
     player.loadVideoById(id);
 });
 
@@ -114,48 +115,53 @@ hubConnection.on("Kick", function () {
 
 function addToPlaylist(url) {
     const id = url.substring(url.indexOf('=') + 1).substring(0, 11);
-    hubConnection.invoke("AddToPlaylist", id).catch(function (e) { console.error(e); });
+    hubConnection.invoke("AddToPlaylist", id);
 }
 
-// function getVideoData(url) {
-//     $.getJSON("https://www.googleapis.com/youtube/v3/videos?part=id%2C+snippet&id=cZmH04yRgH0&key=AIzaSyCkQDvBLuFd9cf7nX7UAXzN-vtrQ3VI6ck",
-//         function (data) {
-//             $("#th").attr("src", data["items"][0]["snippet"]["thumbnails"]["standard"]["url"]);
-//         }
-//     );
-// }
+function getVideoData(url) {
+    $.getJSON("https://www.googleapis.com/youtube/v3/videos?part=id%2C+snippet&id=cZmH04yRgH0&key=AIzaSyCkQDvBLuFd9cf7nX7UAXzN-vtrQ3VI6ck",
+        function (data) {
+            $("#th").attr("src", data["items"][0]["snippet"]["thumbnails"]["standard"]["url"]);
+        }
+    );
+}
 
-function playVideo(time) {
-    hubConnection.invoke("PlayVideo", time).catch(function (e) { console.error(e); });
+function playVideo(seconds, current) {
+    hubConnection.invoke("PlayVideo", seconds, current);
 }
 
 function pauseVideo() {
-    hubConnection.invoke("PauseVideo").catch(function (e) { console.error(e); });
+    hubConnection.invoke("PauseVideo");
+}
+
+function setTime(seconds = 10) {
+    outer = true;
+    player.seekTo(seconds);
 }
 
 function joinGroup(group) {
     if (document.getElementById('group').innerHTML === "None") {
-        hubConnection.invoke("JoinGroup", group).catch(function (e) { console.error(e); });
+        hubConnection.invoke("JoinGroup", group);
     }
 }
 
 function next() {
-    hubConnection.invoke("NextInPlaylist").catch(function (e) { console.error(e); });
+    hubConnection.invoke("NextInPlaylist");
 }
 
 function removeFromPlaylist(id) {
-    hubConnection.invoke("RemoveFromPlaylist", id).catch(function (e) { console.error(e); });
+    hubConnection.invoke("RemoveFromPlaylist", id);
 }
 
 function makeModerator(id) {
-    hubConnection.invoke("ToggleModerator", id).catch(function (e) { console.error(e); });
+    hubConnection.invoke("ToggleModerator", id);
 }
 
 function kickUser(id) {
-    hubConnection.invoke("KickUser", id).catch(function (e) { console.error(e); });
+    hubConnection.invoke("KickUser", id);
 }
 
 hubConnection.start().then(function () {
     const urlParams = new URLSearchParams(window.location.search);
     joinGroup(urlParams.get('id'));
-});
+}); 
