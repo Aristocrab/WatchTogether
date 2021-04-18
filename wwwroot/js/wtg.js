@@ -30,7 +30,8 @@ function onPlayerStateChange(event) {
                 pauseVideo();
             } else if (event.data === 1) {
                 let date = new Date();
-                playVideo(player.getCurrentTime(), date.getSeconds());
+                syncTime(player.getCurrentTime(), date.getSeconds());
+                playVideo();
             } else if (event.data === 0) {
                 removeFromPlaylist("");
                 next();
@@ -46,9 +47,8 @@ const hubConnection = new signalR.HubConnectionBuilder()
     .withUrl("/wtg")
     .build();
 
-hubConnection.on("PlayVideo", function (seconds, current) {
-    let date = new Date();
-    setTime(seconds + Math.abs(current - date.getSeconds()));
+hubConnection.on("PlayVideo", function () {
+    console.log("play");
     outer = true;
     player.playVideo();
 });
@@ -56,6 +56,13 @@ hubConnection.on("PlayVideo", function (seconds, current) {
 hubConnection.on("PauseVideo", function () {
     outer = true;
     player.pauseVideo();
+});
+
+hubConnection.on("SyncTime", function (seconds, current) {
+    console.log("sync");
+    let date = new Date();
+    outer = true;
+    player.seekTo(seconds + Math.abs(current - date.getSeconds()));
 });
 
 hubConnection.on("ChangeVideo", function (id) {
@@ -75,7 +82,7 @@ hubConnection.on("AddToPlaylist", function (id) {
 hubConnection.on("RemoveFromPlaylist", function (id) {
     console.log("removed id:" + id);
     $("#playlist").find('li').each(function () {
-        if($(this).attr("id") === id)  {
+        if ($(this).attr("id") === id) {
             $(this).remove();
         }
     })
@@ -110,7 +117,13 @@ hubConnection.on("KickUser", function (id) {
 });
 
 hubConnection.on("Kick", function () {
+    // TODO: ban
     window.location.replace("/w");
+});
+
+hubConnection.on("PlayEnded", function () {
+    $("#placeholder").show();
+    player.stop();
 });
 
 function addToPlaylist(url) {
@@ -118,25 +131,16 @@ function addToPlaylist(url) {
     hubConnection.invoke("AddToPlaylist", id);
 }
 
-function getVideoData(url) {
-    $.getJSON("https://www.googleapis.com/youtube/v3/videos?part=id%2C+snippet&id=cZmH04yRgH0&key=AIzaSyCkQDvBLuFd9cf7nX7UAXzN-vtrQ3VI6ck",
-        function (data) {
-            $("#th").attr("src", data["items"][0]["snippet"]["thumbnails"]["standard"]["url"]);
-        }
-    );
-}
-
-function playVideo(seconds, current) {
-    hubConnection.invoke("PlayVideo", seconds, current);
+function playVideo() {
+    hubConnection.invoke("PlayVideo");
 }
 
 function pauseVideo() {
     hubConnection.invoke("PauseVideo");
 }
 
-function setTime(seconds = 10) {
-    outer = true;
-    player.seekTo(seconds);
+function syncTime(time, current) {
+    hubConnection.invoke("SyncTime", time, current);
 }
 
 function joinGroup(group) {

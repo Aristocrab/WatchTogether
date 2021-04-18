@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.SignalR;
+using static WatchTogether.Hubs.PlaylistList;
+using static WatchTogether.Hubs.UsersList;
 
 namespace WatchTogether.Hubs
 {
@@ -10,28 +12,23 @@ namespace WatchTogether.Hubs
     {
         public async Task AddToPlaylist(string videoId)
         {
-            if (UsersList.Users.Any(u => u.ConnectionId == Context.ConnectionId))
+            if (Users.Any(u => u.ConnectionId == Context.ConnectionId))
             {
-                var user = UsersList.Users.First(u => u.ConnectionId == Context.ConnectionId);
+                var user = Users.First(u => u.ConnectionId == Context.ConnectionId);
                 if (user.Moderator)
                 {
                     try
                     {
-                        var group = UsersList.Users.First(u => u.ConnectionId == Context.ConnectionId).Group;
-                        if (PlaylistList.Playlists.Any(p => p.Group == group))
-                        {
-                            PlaylistList.Playlists.First(p => p.Group == group).Videos.Add(videoId);
-                            await Clients.Group(user.Group).SendAsync("AddToPlaylist", videoId);
-                        }
-                        else
-                        {
-                            PlaylistList.Playlists.Add(new Playlist {Group = group});
-                            PlaylistList.Playlists.First(p => p.Group == group).Videos.Add(videoId);
-                            await Clients.Group(user.Group).SendAsync("AddToPlaylist", videoId);
-                        }
+                        var group = Users.First(u => u.ConnectionId == Context.ConnectionId).Group;
 
-                        if (PlaylistList.Playlists.First(p => p.Group == group).Videos.Count == 1)
-                            await Clients.Group(user.Group).SendAsync("ChangeVideo", videoId);
+                        if (!Playlists.First(p => p.Group == group).Videos.Contains(videoId))
+                        {
+                            Playlists.First(p => p.Group == group).Videos.Add(videoId);
+                            await Clients.Group(user.Group).SendAsync("AddToPlaylist", videoId);
+
+                            if (Playlists.First(p => p.Group == group).Videos.Count == 1)
+                                await Clients.Group(user.Group).SendAsync("ChangeVideo", videoId);
+                        }
                     }
                     catch (Exception e)
                     {
@@ -43,16 +40,16 @@ namespace WatchTogether.Hubs
 
         public async Task NextInPlaylist()
         {
-            if (UsersList.Users.Any(u => u.ConnectionId == Context.ConnectionId))
+            if (Users.Any(u => u.ConnectionId == Context.ConnectionId))
             {
-                var user = UsersList.Users.First(u => u.ConnectionId == Context.ConnectionId);
+                var user = Users.First(u => u.ConnectionId == Context.ConnectionId);
                 if (user.Moderator)
                 {
-                    var group = UsersList.Users.First(u => u.ConnectionId == Context.ConnectionId).Group;
-                    if (PlaylistList.Playlists.First(p => p.Group == group).Videos.Any())
+                    var group = Users.First(u => u.ConnectionId == Context.ConnectionId).Group;
+                    if (Playlists.First(p => p.Group == group).Videos.Any())
                     {
                         await Clients.Group(user.Group)
-                            .SendAsync("ChangeVideo", PlaylistList.Playlists.First(p => p.Group == group).Videos[0]);
+                            .SendAsync("ChangeVideo", Playlists.First(p => p.Group == group).Videos[0]);
                     }
                 }
             }
@@ -60,44 +57,66 @@ namespace WatchTogether.Hubs
 
         public async Task RemoveFromPlaylist(string id)
         {
-            if (UsersList.Users.Any(u => u.ConnectionId == Context.ConnectionId))
+            if (Users.Any(u => u.ConnectionId == Context.ConnectionId))
             {
-                var user = UsersList.Users.First(u => u.ConnectionId == Context.ConnectionId);
+                var user = Users.First(u => u.ConnectionId == Context.ConnectionId);
                 if (user.Moderator)
                 {
-                    var group = UsersList.Users.First(u => u.ConnectionId == Context.ConnectionId).Group;
+                    var group = Users.First(u => u.ConnectionId == Context.ConnectionId).Group;
+
                     if (string.IsNullOrEmpty(id))
                     {
                         await Clients.Group(user.Group).SendAsync("RemoveFromPlaylist",
-                            PlaylistList.Playlists.First(p => p.Group == group).Videos[0]);
-                        PlaylistList.Playlists.First(p => p.Group == group).Videos.RemoveAt(0);
+                            Playlists.First(p => p.Group == group).Videos[0]);
+                        Playlists.First(p => p.Group == group).Videos.RemoveAt(0);
                     }
                     else
                     {
                         await Clients.Group(user.Group).SendAsync("RemoveFromPlaylist", id);
-                        PlaylistList.Playlists.First(p => p.Group == group).Videos.Remove(id);
+                        Playlists.First(p => p.Group == group).Videos.Remove(id);
+                    }
+
+                    if (Playlists.First(p => p.Group == group).Videos.Any())
+                    {
+                        await Clients.Group(user.Group)
+                            .SendAsync("ChangeVideo",
+                                Playlists.First(p => p.Group == group).Videos[0]);
+                    }
+                    else
+                    {
+                        await Clients.Group(user.Group).SendAsync("PlayEnded");
                     }
                 }
             }
         }
 
-        public async Task PlayVideo(double time, double current)
+        public async Task PlayVideo()
         {
-            if (UsersList.Users.Any(u => u.ConnectionId == Context.ConnectionId))
+            if (Users.Any(u => u.ConnectionId == Context.ConnectionId))
             {
-                var user = UsersList.Users.First(u => u.ConnectionId == Context.ConnectionId);
+                var user = Users.First(u => u.ConnectionId == Context.ConnectionId);
                 if (user.Moderator)
-                    await Clients.GroupExcept(user.Group, Context.ConnectionId).SendAsync("PlayVideo", time, current);
+                    await Clients.GroupExcept(user.Group, Context.ConnectionId).SendAsync("PlayVideo");
                 else
                     await Clients.Caller.SendAsync("PauseVideo");
             }
         }
 
+        public async Task SyncTime(double time, double current)
+        {
+            if (Users.Any(u => u.ConnectionId == Context.ConnectionId))
+            {
+                var user = Users.First(u => u.ConnectionId == Context.ConnectionId);
+                if (user.Moderator)
+                    await Clients.GroupExcept(user.Group, Context.ConnectionId).SendAsync("SyncTime", time, current);
+            }
+        }
+
         public async Task PauseVideo()
         {
-            if (UsersList.Users.Any(u => u.ConnectionId == Context.ConnectionId))
+            if (Users.Any(u => u.ConnectionId == Context.ConnectionId))
             {
-                var user = UsersList.Users.First(u => u.ConnectionId == Context.ConnectionId);
+                var user = Users.First(u => u.ConnectionId == Context.ConnectionId);
                 if (user.Moderator)
                     await Clients.GroupExcept(user.Group, Context.ConnectionId).SendAsync("PauseVideo");
                 else
@@ -107,32 +126,48 @@ namespace WatchTogether.Hubs
 
         public async Task JoinGroup(string group)
         {
-                await Groups.AddToGroupAsync(Context.ConnectionId, group);
+            await Groups.AddToGroupAsync(Context.ConnectionId, group);
 
-                if (UsersList.Users.All(u => u.Group != group))
+            if (Users.All(u => u.Group != group))
+            {
+                Users.Add(new User
                 {
-                    UsersList.Users.Add(new User
-                    {
-                        ConnectionId = Context.ConnectionId,
-                        Group = group,
-                        Moderator = true
-                    });
-                    await Clients.Caller.SendAsync("SetGroup", $"Admin of {group}");
-                    await Clients.Group(group).SendAsync("AddAdmin", Context.ConnectionId);
-                }
-                else
+                    ConnectionId = Context.ConnectionId,
+                    Group = group,
+                    Moderator = true,
+                    Admin = true
+                });
+                if (Playlists.All(p => p.Group != group))
                 {
-                    UsersList.Users.Add(new User {ConnectionId = Context.ConnectionId, Group = group});
-                    await Clients.Caller.SendAsync("SetGroup", $"User of {group}");
-                    await Clients.Group(group).SendAsync("AddMember", Context.ConnectionId);
+                    Playlists.Add(new Playlist {Group = group});
                 }
+
+                await Clients.Caller.SendAsync("SetGroup", $"Admin of {group}");
+                await Clients.Group(group).SendAsync("AddAdmin", Context.ConnectionId);
+            }
+            else
+            {
+                Users.Add(new User {ConnectionId = Context.ConnectionId, Group = group});
+                await Clients.Caller.SendAsync("SetGroup", $"User of {group}");
+                await Clients.Group(group).SendAsync("AddMember", Context.ConnectionId);
+
+                // if (Playlists.First(p => p.Group == group).Videos.Any())
+                // {
+                //     Console.WriteLine(1);
+                //     Thread.Sleep(1000);
+                //     await Clients.Caller.SendAsync("ChangeVideo", Playlists.First(p => p.Group == group).Videos.First());
+                //     Thread.Sleep(1000);
+                //     await Clients.Client(Users.First(u => u.Group == group && u.Admin).ConnectionId)
+                //         .SendAsync("SyncWithNew", Context.ConnectionId);
+                // }
+            }
         }
 
         public async Task ToggleModerator(string connectionId)
         {
-            var user = UsersList.Users.Where(u => u.ConnectionId == connectionId).ToList();
-            var caller = UsersList.Users.First(u => u.ConnectionId == Context.ConnectionId);
-            
+            var user = Users.Where(u => u.ConnectionId == connectionId).ToList();
+            var caller = Users.First(u => u.ConnectionId == Context.ConnectionId);
+
             if (user.Any() && caller.Moderator)
             {
                 user.First().Moderator = !user.First().Moderator;
@@ -143,27 +178,29 @@ namespace WatchTogether.Hubs
 
         public async Task KickUser(string connectionId)
         {
-            var user = UsersList.Users.Where(u => u.ConnectionId == connectionId).ToList();
-            var caller = UsersList.Users.First(u => u.ConnectionId == Context.ConnectionId);
+            var user = Users.Where(u => u.ConnectionId == connectionId).ToList();
+            var caller = Users.First(u => u.ConnectionId == Context.ConnectionId);
 
             if (user.Any() && caller.Moderator)
             {
                 user.First().Moderator = false;
                 await Clients.GroupExcept(caller.Group, user.First().ConnectionId).SendAsync("KickUser", connectionId);
                 await Clients.Client(user.First().ConnectionId).SendAsync("Kick");
-                UsersList.Users.Remove(user.First());
+                Users.Remove(user.First());
             }
         }
     }
-    
+
     public class User
     {
         public string ConnectionId { get; init; }
+
         public string Group { get; init; }
-        // public bool Admin { get; set; }
+
+        public bool Admin { get; init; }
         public bool Moderator { get; set; }
     }
-    
+
     public class Playlist
     {
         public string Group { get; init; }
