@@ -30,7 +30,7 @@ function onPlayerStateChange(event) {
                 pauseVideo();
             } else if (event.data === 1) {
                 let date = new Date();
-                syncTime(player.getCurrentTime(), date.getSeconds());
+                syncTime(player.getCurrentTime(), date.getSeconds() + date.getMilliseconds()/1000);
                 playVideo();
             } else if (event.data === 0) {
                 removeFromPlaylist("");
@@ -59,10 +59,10 @@ hubConnection.on("PauseVideo", function () {
 });
 
 hubConnection.on("SyncTime", function (seconds, current) {
-    console.log("sync");
+    // huge span fix
     let date = new Date();
     outer = true;
-    player.seekTo(seconds + Math.abs(current - date.getSeconds()));
+    player.seekTo(seconds + Math.abs(current - (date.getSeconds() + date.getMilliseconds()/1000)));
 });
 
 hubConnection.on("ChangeVideo", function (id) {
@@ -93,7 +93,9 @@ hubConnection.on("SetGroup", function (group) {
 });
 
 hubConnection.on("AddMember", function (id) {
-    $("#usersList").append('<li class="list-group-item list-group-item-action d-flex justify-content-between align-items-start"><div><div>' + id + '<span class="text-body" onclick="kickUser(\'' + id + '\')"> &#215;</span></div></div><div><a title="Make a moderator" href="#"><span onclick="makeModerator(\'' + id + '\')" class="badge bg-primary">M</span></a></div></li>');
+    // TODO: all users list
+    $("#usersList")
+        .append('<li class="list-group-item list-group-item-action d-flex justify-content-between align-items-start"><div><div>' + id + '<span class="text-body" onclick="kickUser(\'' + id + '\')"> &#215;</span></div></div><div><a title="Make a moderator" href="#"><span onclick="makeModerator(\'' + id + '\')" class="badge bg-primary">M</span></a></div></li>');
 })
 
 hubConnection.on("AddAdmin", function (id) {
@@ -124,6 +126,11 @@ hubConnection.on("Kick", function () {
 hubConnection.on("PlayEnded", function () {
     $("#placeholder").show();
     player.stop();
+});
+
+hubConnection.on("SyncWithNew", function (connectionId) {
+    let date = new Date();
+    hubConnection.invoke("SyncWithNew", connectionId, player.getCurrentTime(), date.getSeconds() + date.getMilliseconds()/1000, player.getPlayerState());
 });
 
 function addToPlaylist(url) {
